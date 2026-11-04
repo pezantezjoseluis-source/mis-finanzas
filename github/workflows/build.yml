@@ -1,0 +1,54 @@
+name: Construir APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Bajar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Descomprimir el proyecto
+        run: |
+          rm -rf proyecto
+          unzip -q mis-finanzas.zip -d proyecto
+          ls proyecto
+
+      - name: Construir la APK
+        working-directory: proyecto
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Ponerle nombre a la APK
+        run: cp proyecto/app/build/outputs/apk/release/app-release.apk "MisFinanzas-v${{ github.run_number }}.apk"
+
+      - name: Guardar la APK en Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: MisFinanzas-v${{ github.run_number }}
+          path: MisFinanzas-v${{ github.run_number }}.apk
+
+      - name: Publicar la APK en Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Mis Finanzas v${{ github.run_number }}
+          body: Toca el archivo .apk de abajo para descargarlo e instalarlo.
+          files: MisFinanzas-v${{ github.run_number }}.apk
